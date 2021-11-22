@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="utf-8">
+<title>Caramel Cat</title>
+
+<style>
+
+* {
+box-sizing: border-box;
+margin-top: 12px;
+width: 100%;
+}
+
+img {
+width: auto;
+}
+
+div {
+margin-bottom: 12px;
+}
+
+body {
+background-color: #33d1ff;
+font-family: 'Dancing Script', cursive;
+color: #061a20;
+/*font-family: din-round,sans-serif;*/
+margin: auto;
+text-align: center;
+width: 480px; 
+font-size: x-large;
+}
+
+h1 { color: #22233f; font-size: 65px; font-weight: normal; margin-bottom: 12px; text-align: center; text-shadow: 0 1px 1px #9193d3; }
+
+textarea {
+ margin-bottom: 12px; 
+}
+
+input {
+width: 210px;
+height: 65px;
+font-size: x-large;
+}
+
+.bigbutton {
+width: 140px;
+}
+
+#messages {
+font-size: medium;
+}
+
+#amount {
+width: 60px;
+}
+
+button {
+  width: 100px;
+  height: 80px;
+  margin-left: 6px;
+  font-size: large;
+
+  appearance: button;
+  background-color: #1899D6;
+  border: solid transparent;
+  border-radius: 16px;
+  border-width: 0 0 4px;
+  box-sizing: border-box;
+  color: #FFFFFF;
+  cursor: pointer;
+  display: inline-block;
+  font-family: din-round,sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  line-height: 20px;
+  margin: 0;
+  outline: none;
+  overflow: visible;
+  padding: 13px 16px;
+  text-align: center;
+  text-transform: uppercase;
+  touch-action: manipulation;
+  transform: translateZ(0);
+  transition: filter .2s;
+  user-select: none;
+  -webkit-user-select: none;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+button:after {
+  background-clip: padding-box;
+  background-color: #1CB0F6;
+  border: solid transparent;
+  border-radius: 16px;
+  border-width: 0 0 4px;
+  bottom: -4px;
+  content: "";
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: -1;
+}
+
+button:main,
+button:focus {
+  user-select: auto;
+}
+
+button:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+button:disabled {
+  cursor: auto;
+}
+
+</style>
+
+<script type="text/javascript">
+
+	/*
+	==================================================
+	=================== GLOBAL VARS ==================
+	==================================================	
+	*/	
+
+	var debug = false;
+	var prefix = "CAT";
+	var coinsMined = 0;
+	
+	// mining stuff
+	var stopMiner = false;
+	var nonce = 0;
+	
+	var myloop;
+	var stopbalanceLoop = true;
+
+	// load button load private and public keys
+	var privateKey = null;
+	var publicKey = null;
+	var pubkey64 = null;	
+	var address = null;
+	
+	// transfer
+	var to = ""
+	
+	/*
+	==================================================
+	====================== UTILS =====================
+	==================================================	
+	*/	
+	
+	function get(x) {
+		return document.querySelector(x);
+	}
+	
+	function error(msg) {		
+		get("#errorMessage").innerHTML = msg;
+		show("#errorMessage");
+	}
+	
+	function status(msg) {		
+		get("#statusMessage").innerHTML = msg;
+		show("#statusMessage");
+	}
+	
+	function green(msg) {		
+		get("#greenMessage").innerHTML = msg;
+		show("#greenMessage");
+	}		
+	
+	function show(id) {
+		get(id).style.display = 'initial';
+	}	
+	
+	function hide(id) {
+		get(id).style.display = 'none';
+	}
+	
+	function base64EncodeURL(byteArray) {
+		  return btoa(Array.from(new Uint8Array(byteArray)).map(val => {
+		    return String.fromCharCode(val);
+		  }).join('')).replace(/\+/g, '-').replace(/\//g, '_').replace(/\=/g, '');
+		}	
+	
+	function base64DecodeURL(b64urlstring) {
+		  return new Uint8Array(atob(b64urlstring.replace(/-/g, '+').replace(/_/g, '/')).split('').map(val => {
+		    return val.charCodeAt(0);
+		  }));
+	}
+	
+	function toHexString(byteArray) {
+		  return Array.from(byteArray, function(byte) {
+		    return ('0' + (byte & 0xFF).toString(16)).slice(-2);
+		  }).join('')
+	}	
+	
+	// Convert a hex string to a byte array
+	function hexToBytes(hex) {
+	    for (var bytes = [], c = 0; c < hex.length; c += 2)
+	    bytes.push(parseInt(hex.substr(c, 2), 16));
+	    return bytes;
+	}
+	
+	/*
+	==================================================
+	=============== MINE / CRYPTO STUFF ==============
+	==================================================	
+	*/		
+	
+	function mine() {
+		if (stopMiner)
+			stopMiner = false;		
+		var delay = 1;
+		
+		function timeoutLoop() {
+			console.log("mining...");
+			n = (Math.floor(Math.random() * 10000000000000));
+
+			toMine = n + "_" + address;
+			
+			sha256d(toMine).then((sha) =>{
+								
+				sha = base64EncodeURL(sha);
+				status(sha);
+				upper = sha.toUpperCase();
+				
+				if (upper.startsWith(prefix)) { 
+					green("Yeah! You find a new coin! (" + (++coinsMined) + ")");
+					nonce = n;
+					stopMiner = true;
+					afterMineCoin();					
+	 			}				
+				
+				if (!stopMiner)
+					setTimeout(timeoutLoop, delay);				
+			});
+		}
+
+		if (!stopMiner)
+			setTimeout(timeoutLoop, delay);
+	}		
+	
+	function afterMineCoin() {
+		var xmlhttp = new XMLHttpRequest(); 
+		xmlhttp.open("POST", "/meow");
+		xmlhttp.setRequestHeader("Content-Type", "application/json");
+		xmlhttp.onreadystatechange = function() {
+	        if (this.readyState == 4 && this.status == 200) {
+	        	btn_mine();
+	        }
+	    };	    
+		xmlhttp.send(JSON.stringify({'method':'insertcoin', address:address, nonce:nonce}));
+	}
+	
+	async function sha256d(message) {
+		  const msgUint8 = new TextEncoder().encode(message);
+		  const hashBuffer = await crypto.subtle.digest('SHA-256', await crypto.subtle.digest('SHA-256', msgUint8));
+		  const hashArray = Array.from(new Uint8Array(hashBuffer));
+		  return hashArray;
+		  //hashHex = toHexString(hashArray);
+		  //hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+		  //return hashHex;
+	}
+	
+	 function importKey(jwkKey, options) {
+		   return window.crypto.subtle.importKey(
+		     "jwk",
+		     jwkKey,
+	        {
+	          name: "ECDSA",
+	          namedCurve: "P-256"
+	        },
+		     true,
+		     options
+		   );
+		 }    	  
+		 
+	 	  async function exportCryptoKey(key) {
+	 	    const exported = await window.crypto.subtle.exportKey(
+	 	      "jwk",
+	 	      key
+	 	    );
+	 	    delete exported["crv"];
+	 	    delete exported["kty"];
+	 	    delete exported["key_ops"];
+	 	    delete exported["ext"];    	    
+	 	    jsonKey = JSON.stringify(exported, null, " ");
+	 	    const exportKeyOutput = get("#keysTextArea"); 	    
+	 	    exportKeyOutput.value = jsonKey;
+	 	    
+	 	    // if address (address) contains '-' or '_' gen another key
+	 	    pubkeyHex = "04" + toHexString(base64DecodeURL(exported.x)) + toHexString(base64DecodeURL(exported.y));	 	    
+	 	    pubkey64 = base64EncodeURL(hexToBytes(pubkeyHex));
+	 	    
+			sha256d(pubkey64).then((sha) =>{
+				address = base64EncodeURL(sha);
+				if (address.includes("-") || address.includes("_")) {
+					setTimeout(btn_genKeys, 1); // try again
+				}
+			});	 	    
+	 	  }
+	
+	/*
+	==================================================
+	=================== SHOW / HIDE ==================
+	==================================================	
+	*/	
+	
+	function start() {
+		
+		if (debug) show("#debugMessage");
+		else hide("#debugMessage");
+		
+		if (true) initialScreen();
+		
+		btn_genKeys(); // why not?
+		setTimeout(btn_loadKeys, 1000);		
+	}	
+	
+	function stop() {
+		stopMiner = true;
+		cleanSlow();
+	}
+	
+	function initialScreen() {
+		clearTimeout(myloop);
+		stopbalanceLoop = true;
+		stop();		
+		show("#initialScreen");
+		hide("#walletScreen");
+		hide("#greenMessage");
+		hide("#footer");
+	}
+	
+	function cleanSlow() {
+		setTimeout(clean, 100);
+	}
+	
+	function clean() {
+		 hide("#statusMessage");
+		 hide("#errorMessage");		 
+	}
+	
+	function showWallet() {
+		stopbalanceLoop = false;
+		setTimeout(balanceLoop, 100);
+		hide("#initialScreen");
+		show("#walletScreen");
+		hide("#stopButton");
+		show("#mineButton");
+		show("#footer");
+	}
+	
+	function balanceLoop() {
+		
+		if (myloop != null) clearTimeout(myloop);
+		
+		function getbalance() {
+			var xmlhttp = new XMLHttpRequest(); 
+			xmlhttp.open("POST", "/meow");
+			xmlhttp.setRequestHeader("Content-Type", "application/json");
+			xmlhttp.onreadystatechange = function() {
+		        if (this.readyState == 4 && this.status == 200) {
+		        	var json = JSON.parse(xmlhttp.responseText);
+		        	if (json["balance"] ==  null) {
+		        		json["balance"] = "Loading...";
+		        		json["supply"] = "Loading...";
+		        	}
+		        	get("#balance").innerHTML = "<b>Your balance: " + json["balance"] + "</b><br/>Circulating Supply: " + json["supply"];
+		        	if (json["prefix"] != null) prefix = json["prefix"];
+		        	if (json["debug"] != null) debug = true;
+		        	else  debug = false;
+		        }
+		    };	    
+			xmlhttp.send(JSON.stringify({'method':'ping', address:address}));
+			
+			if (!stopbalanceLoop)
+				myloop = setTimeout(getbalance, 10*1000);			
+		}
+		
+		if (!stopbalanceLoop)
+			myloop = setTimeout(getbalance, 1);			
+	} 
+	
+	/*
+	==================================================
+	===================== BUTTONS ====================
+	==================================================	
+	*/
+	
+  	/*
+	  "Generate key" button event.
+	  The public and private keys will generated and then exported (to show in the screen).
+	  When the user press the LOAD button, the keys will be reconstructed, so the user 
+	  can generate a new one or copy an old one in text area.
+	*/  	  
+	   function btn_genKeys() {
+		console.log("btn_genKeys");
+	  	clean();	
+	   	var keyPair = window.crypto.subtle.generateKey( 
+	   	    {
+	   	      name: "ECDSA",
+	   	      namedCurve: "P-256"
+	   	    },
+	   	    true,
+	   	    ["sign", "verify"]
+	   	  ).then((keyPair) => {
+	   		exportCryptoKey(keyPair.privateKey);
+	  	  });
+	   }		
+	
+	  	/*
+		  "LOAD" button event.
+		  Get text area data and generate globals privatekey, publickey and pubkey64. 
+		*/  		
+	function btn_loadKeys() {
+		console.log("btn_loadKeys");
+		clean();
+		jwkKey = get("#keysTextArea").value;
+		if (jwkKey.trim() == "") {
+			error("No, no, no.. gen your key first.");
+			return;
+		}
+		
+		json = JSON.parse(jwkKey);
+		json["crv"] = "P-256";
+		json["kty"] = "EC";
+		
+		importKey(json, ["sign"]).then((x) => {
+		    return privateKey = x;
+		  });
+		delete json["d"];
+		importKey(json, ["verify"]).then((x) => {
+		    return publicKey = x;
+		  });
+		
+		delete json["crv"];
+		delete json["kty"];		
+		
+		pubkeyHex = "04" + toHexString(base64DecodeURL(json.x)) + toHexString(base64DecodeURL(json.y));
+		pubkey64 = base64EncodeURL(hexToBytes(pubkeyHex));
+		
+		console.log(pubkey64);
+		
+		sha256d(pubkey64).then((sha) =>{
+			address = base64EncodeURL(sha);
+			console.log(address);
+		});
+				
+		showWallet();
+	}
+	  	
+	function prepareRequest(callback) {
+		var xmlhttp = new XMLHttpRequest();
+		xmlhttp.open("POST", "/meow");
+		xmlhttp.setRequestHeader("Content-Type", "application/json");
+		xmlhttp.onreadystatechange = function() {
+	        if (this.readyState == 4 && this.status == 200) {
+	        	var json = JSON.parse(xmlhttp.responseText);
+	        	callback(json);
+	        }
+	    };	    
+	    return xmlhttp;		
+	}
+	
+	function callBackTransfer(json) {
+		 console.log("callBackTransfer");
+		 console.log(json);
+	}	
+	
+	function btn_transfer() {
+		console.log("btn_transfer");
+		to = get("#to").value;
+		amount = get("#amount").value;
+		transfer = prepareRequest(callBackTransfer);
+		
+		let enc = new TextEncoder();
+	    signature = window.crypto.subtle.sign(
+		  	      {
+		  	        name: "ECDSA",
+		  	        hash: {name: "SHA-256"},
+		  	      },
+		  	      privateKey,
+		  	      enc.encode(address + to + amount)
+		  	    ).then((signature) =>{
+				    transfer.send(JSON.stringify({'method':'transfer', from:pubkey64, to:to, amount:amount, sign:base64EncodeURL(new Int8Array(signature))}));
+		  	    });	
+	    
+		get("#to").value = "";
+		get("#amount").value = "";
+				
+		setTimeout(balanceLoop, 1000);		
+ 	}  	
+	  	
+	/* 
+	  "Mine!" button event
+	*/		
+	function btn_mine() {
+		clean();
+		mine(afterMineCoin);
+		hide("#mineButton");
+		show("#stopButton");		
+	}	
+	
+	function btn_stop() {
+		cleanSlow();
+		stopMiner = true;
+		show("#mineButton");
+		hide("#stopButton");
+		hide("#greenMessage");
+	}
+	
+	function btn_copyKeys() {
+		clean();
+		text = get("#keysTextArea").value;
+		if (text == "") {
+			error("Generate a new key (or paste your old key) first!");
+			return;
+		}
+		btn_copy(text);
+		status("Copied! <b>Now save it </b>in a safe place");
+	}
+	
+	function btn_copyAddress() {
+		clean();
+		btn_copy(address);
+		status("Copied!");
+	}	
+	
+	function btn_copy(text) {
+		
+	    if (window.clipboardData && window.clipboardData.setData) {
+	        // Internet Explorer-specific code path to prevent textarea being shown while dialog is visible.
+	        return window.clipboardData.setData("Text", text);
+	
+	    }
+	    else if (document.queryCommandSupported && document.queryCommandSupported("copy")) {
+	        var textarea = document.createElement("textarea");
+	        textarea.value = text;
+	        textarea.style.position = "fixed";  // Prevent scrolling to bottom of page in Microsoft Edge.
+	        document.body.appendChild(textarea);
+	        textarea.select();
+	        try {
+	            return document.execCommand("copy");  // Security exception may be thrown by some browsers.
+	        }
+	        catch (ex) {
+	            console.warn("Copy to clipboard failed.", ex);
+	            return false;
+	        }
+	        finally {
+	            document.body.removeChild(textarea);	            
+	        }
+	    }
+	}
+ 
+	function btn_clean() {
+		clean();
+		get("#keysTextArea").value = '';
+	}	
+	
+	function btn_add(amount) {
+		if (amount == 0) {
+			get("#amount").value = "";
+			get("#to").value = "";
+		}
+		else {
+			if (get("#amount").value == "") get("#amount").value = 0;
+			get("#amount").value = (get("#amount").value)/1 + amount; 
+		}
+	}
+	
+	function seeMyCoins() {
+		get("#mycoinslink").href = "/meow/owner=" + address;
+	}
+	
+    </script>
+</head>
+
+<body onload="start();">
+<div>
+		<div><h1>Caramel Cat <img src="./cat.png" /></h1></div>		
+		<div id="debugMessage">==== debug mode ====<br/></div>
+		
+        <!-- =========================================================== -->				
+		<!-- ==================== INITIAL SCREEN ======================= -->
+		<!-- =========================================================== -->		
+		<div id="initialScreen">		
+		<b>Backup</b> (or restore). Then click <b>Load</b>:
+		<textarea id="keysTextArea"  rows="5"></textarea>		
+		<button style="color:yellow;" onclick="btn_copyKeys();">Copy</button>
+		<button onclick="btn_genKeys();"> New Key</button>												
+		<button onclick="btn_loadKeys();">LOAD   </button>
+		<!-- <button onclick="btn_clean();"> Clean       </button> -->
+		</div>
+				
+        <!-- =========================================================== -->				
+		<!-- ==================== WALLET SCREEN ======================= -->
+		<!-- =========================================================== -->
+		<div    id="walletScreen">
+		<button class="bigbutton" style="color:yellow;" onclick="initialScreen();">Save Keys</button>
+		<button class="bigbutton" onclick="btn_copyAddress();">Copy Addr</button>
+		<div    id="balance">Loading balance...</div>
+		<div><b>Transfer</b><br/></div>		
+		<div>
+		<button onclick="btn_add(1);">  +1  </button>
+		<button onclick="btn_add(5);">  +5  </button>
+		<button onclick="btn_add(10);"> +10 </button>
+		<button onclick="btn_add(0);"> Clean</button>		
+		</div>				
+		
+        <!-- =========================================================== -->				
+		<!-- ======================== TRANSFER ========================= -->
+		<!-- =========================================================== -->		
+		<div    id = "transfer">
+		<input  id="amount" class="add" type="text" value="" readonly /> <b>To</b>
+		<input  id="to" class="add" type="text" value="" />				
+		<button id="btn_transfer" onclick="btn_transfer();">Send</button>
+		</div>
+		
+		<div><b>Mine a new coin</b></div>
+		<button style="color:Chartreuse;" class="bigbutton" id="mineButton" onclick="btn_mine();">Mine</button>
+		<button style="color:red;" class="bigbutton" id="stopButton" onclick="btn_stop();">Stop </button>		
+		</div>
+		
+        <!-- =========================================================== -->				
+		<!-- ======================= MESSAGES ========================== -->
+		<!-- =========================================================== -->
+		<div id="messages">
+		<div id="errorMessage" style="color:red;"></div>		
+		<div id="statusMessage" style="color:blue;"></div><br/>
+		<div id="greenMessage" style="color:green;"></div>
+		</div>
+		
+		<!-- =========================================================== -->				
+		<!-- ========================= FOOTER ========================== -->
+		<!-- =========================================================== -->
+		<div id="footer">
+		<!-- <a id="mycoinslink" target="_blank" href="#" onclick="seeMyCoins(); return true;">see my coins</a><br/>  -->
+		<a target="_blank" href="/whitepaper.html">more info</a>	
+</div>	
+</body>
+
+</html>
