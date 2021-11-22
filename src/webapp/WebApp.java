@@ -120,19 +120,21 @@ public abstract class WebApp {
 		HttpConfiguration https = new HttpConfiguration();
 		https.addCustomizer(new SecureRequestCustomizer());
 
-		SslContextFactory sslContextFactory = new SslContextFactory();
-		sslContextFactory.setKeyStorePath(WebApp.class.getResource("/key.jks").toExternalForm());
-		sslContextFactory.setKeyStorePassword(webapp.getPasswordSSL());
-		sslContextFactory.setKeyManagerPassword(webapp.getPasswordSSL());
+		if (WebApp.class.getResource("/key.jks") != null) {
+			SslContextFactory sslContextFactory = new SslContextFactory();
+			sslContextFactory.setKeyStorePath(WebApp.class.getResource("/key.jks").toExternalForm());
+			sslContextFactory.setKeyStorePassword(webapp.getPasswordSSL());
+			sslContextFactory.setKeyManagerPassword(webapp.getPasswordSSL());
 
-		ServerConnector sslConnector = new ServerConnector(server, new SslConnectionFactory(sslContextFactory, "http/1.1"), new HttpConnectionFactory(https));
-		sslConnector.setPort(443);
+			ServerConnector sslConnector = new ServerConnector(server, new SslConnectionFactory(sslContextFactory, "http/1.1"), new HttpConnectionFactory(https));
+			sslConnector.setPort(443);
+			server.addConnector(sslConnector);
+		}
 
 		ServerConnector connector = new ServerConnector(server);
 		connector.setPort(9443);
 
 		server.addConnector(connector);
-		server.addConnector(sslConnector);
 
 		ClassLoader cl = WebApp.class.getClassLoader();
 		URL f = cl.getResource("html");
