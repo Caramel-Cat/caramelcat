@@ -75,9 +75,9 @@ public class CaramelCat extends BasicApp {
 		JSONObject response = new JSONObject();
 		response.put("status", "error");
 
-		// should we stop mining at 21 mi?
+		// should we have max supply?
 		Long supply = getLong("supply");
-		if (supply >= 2_100_000) return response;
+		if (supply >= 512_000) return response;
 
 		// must has a prefix to mine (see ping)
 		String prefix = minePrefix.get(user);
