@@ -6,6 +6,8 @@ Unlike other cryptos, this one you can mine. It's very easy, even if you're a do
 
 ## How to run
 
+download latest release then
+
 **java -jar caramelcat_v0.1.jar**
 
 ## API
