@@ -30,11 +30,11 @@ curl --header "Content-Type: application/json" --request POST --data '{"method":
 curl --header "Content-Type: application/json" --request POST --data '{"method":"sendtoaddress", "to":"qlKHr8HLdl4WSil4U1Yy3VqnHY3DpKO5KeDw5RYc4RU", "from": "miiOu1UjS4GCZ9kTTEHwwX7Fawex3kI9y72axqiDzcM", "amount":2}' http://localhost:9443/meow
 ```
 
-## All balances
+## Show all balances
 
 * **all**
 
 ```
-curl --header "Content-Type: application/json" --request POST --data '{"method":"all"}' http://localhost:9443/meow
+curl --header "Content-Type: application/json" --request POST --data '{"method":"all"}' https://caramelcat.org/meow
 ```
 
