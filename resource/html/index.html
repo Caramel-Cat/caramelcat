@@ -583,8 +583,8 @@ button:disabled {
 </head>
 
 <body onload="start();">
-<div>
-		<div><h1>Caramel Cat <img src="./cat.png" /></h1></div>		
+<div>		
+		<div><img src="./cat.png" /></div>
 		<div id="debugMessage">==== debug mode ====<br/></div>
 		
         <!-- =========================================================== -->				
@@ -606,7 +606,6 @@ button:disabled {
 		<button class="bigbutton" style="color:yellow;" onclick="initialScreen();">Save Keys</button>
 		<button class="bigbutton" onclick="btn_copyAddress();">Copy Addr</button>
 		<div    id="balance">Loading balance...</div>
-		<div><b>Transfer</b><br/></div>		
 		<div>
 		<button onclick="btn_add(1);">  +1  </button>
 		<button onclick="btn_add(5);">  +5  </button>
@@ -623,7 +622,6 @@ button:disabled {
 		<button id="btn_transfer" onclick="btn_transfer();">Send</button>
 		</div>
 		
-		<div><b>Mine a new coin</b></div>
 		<button style="color:Chartreuse;" class="bigbutton" id="mineButton" onclick="btn_mine();">Mine</button>
 		<button style="color:red;" class="bigbutton" id="stopButton" onclick="btn_stop();">Stop </button>		
 		</div>
@@ -639,10 +637,11 @@ button:disabled {
 		
 		<!-- =========================================================== -->				
 		<!-- ========================= FOOTER ========================== -->
-		<!-- =========================================================== -->
+		<!-- =========================================================== -->		
 		<div id="footer">
 		<!-- <a id="mycoinslink" target="_blank" href="#" onclick="seeMyCoins(); return true;">see my coins</a><br/>  -->
-		<a target="_blank" href="/whitepaper.html">more info</a>	
+		<a target="_blank" href="/whitepaper.html">info</a>	
+		</div>
 </div>	
 </body>
 
