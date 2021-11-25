@@ -8,7 +8,15 @@ Unlike other cryptos, this one you can mine. It's very easy, even if you're a do
 
 download latest release then
 
-**java -jar caramelcat-0.2-jar-with-dependencies.jar**
+**java -jar caramelcat-0.3-jar-with-dependencies.jar**
+
+## Mining
+
+* **mine** (to stop, call again with "address":"")
+
+```
+curl --header "Content-Type: application/json" --request POST --data '{"method":"mine", "address": "miiOu1UjS4GCZ9kTTEHwwX7Fawex3kI9y72axqiDzcM"}' http://localhost:9443/meow
+```
 
 ## API
 
