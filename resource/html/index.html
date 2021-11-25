@@ -39,9 +39,9 @@ textarea {
 }
 
 input {
-width: 210px;
+width: 330px;
 height: 65px;
-font-size: x-large;
+font-size: small;
 }
 
 .bigbutton {
@@ -54,6 +54,7 @@ font-size: medium;
 
 #amount {
 width: 60px;
+font-size: x-large;
 }
 
 button {
@@ -130,12 +131,6 @@ button:disabled {
 	*/	
 
 	var debug = false;
-	var prefix = "CAT";
-	var coinsMined = 0;
-	
-	// mining stuff
-	var stopMiner = false;
-	var nonce = 0;
 	
 	var myloop;
 	var stopbalanceLoop = true;
@@ -168,11 +163,6 @@ button:disabled {
 		get("#statusMessage").innerHTML = msg;
 		show("#statusMessage");
 	}
-	
-	function green(msg) {		
-		get("#greenMessage").innerHTML = msg;
-		show("#greenMessage");
-	}		
 	
 	function show(id) {
 		get(id).style.display = 'initial';
@@ -209,63 +199,15 @@ button:disabled {
 	
 	/*
 	==================================================
-	=============== MINE / CRYPTO STUFF ==============
+	=============== CRYPTO STUFF ==============
 	==================================================	
 	*/		
-	
-	function mine() {
-		if (stopMiner)
-			stopMiner = false;		
-		var delay = 1;
-		
-		function timeoutLoop() {
-			console.log("mining...");
-			n = (Math.floor(Math.random() * 10000000000000));
-
-			toMine = n + "_" + address;
-			
-			sha256d(toMine).then((sha) =>{
-								
-				sha = base64EncodeURL(sha);
-				status(sha);
-				upper = sha.toUpperCase();
-				
-				if (upper.startsWith(prefix)) { 
-					green("Yeah! You find a new coin! (" + (++coinsMined) + ")");
-					nonce = n;
-					stopMiner = true;
-					afterMineCoin();					
-	 			}				
-				
-				if (!stopMiner)
-					setTimeout(timeoutLoop, delay);				
-			});
-		}
-
-		if (!stopMiner)
-			setTimeout(timeoutLoop, delay);
-	}		
-	
-	function afterMineCoin() {
-		var xmlhttp = new XMLHttpRequest(); 
-		xmlhttp.open("POST", "/meow");
-		xmlhttp.setRequestHeader("Content-Type", "application/json");
-		xmlhttp.onreadystatechange = function() {
-	        if (this.readyState == 4 && this.status == 200) {
-	        	btn_mine();
-	        }
-	    };	    
-		xmlhttp.send(JSON.stringify({'method':'insertcoin', address:address, nonce:nonce}));
-	}
 	
 	async function sha256d(message) {
 		  const msgUint8 = new TextEncoder().encode(message);
 		  const hashBuffer = await crypto.subtle.digest('SHA-256', await crypto.subtle.digest('SHA-256', msgUint8));
 		  const hashArray = Array.from(new Uint8Array(hashBuffer));
 		  return hashArray;
-		  //hashHex = toHexString(hashArray);
-		  //hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-		  //return hashHex;
 	}
 	
 	 function importKey(jwkKey, options) {
@@ -323,18 +265,11 @@ button:disabled {
 		setTimeout(btn_loadKeys, 1000);		
 	}	
 	
-	function stop() {
-		stopMiner = true;
-		cleanSlow();
-	}
-	
 	function initialScreen() {
 		clearTimeout(myloop);
 		stopbalanceLoop = true;
-		stop();		
 		show("#initialScreen");
 		hide("#walletScreen");
-		hide("#greenMessage");
 		hide("#footer");
 	}
 	
@@ -352,8 +287,6 @@ button:disabled {
 		setTimeout(balanceLoop, 100);
 		hide("#initialScreen");
 		show("#walletScreen");
-		hide("#stopButton");
-		show("#mineButton");
 		show("#footer");
 	}
 	
@@ -498,24 +431,6 @@ button:disabled {
 		setTimeout(balanceLoop, 1000);		
  	}  	
 	  	
-	/* 
-	  "Mine!" button event
-	*/		
-	function btn_mine() {
-		clean();
-		mine(afterMineCoin);
-		hide("#mineButton");
-		show("#stopButton");		
-	}	
-	
-	function btn_stop() {
-		cleanSlow();
-		stopMiner = true;
-		show("#mineButton");
-		hide("#stopButton");
-		hide("#greenMessage");
-	}
-	
 	function btn_copyKeys() {
 		clean();
 		text = get("#keysTextArea").value;
@@ -568,6 +483,7 @@ button:disabled {
 		if (amount == 0) {
 			get("#amount").value = "";
 			get("#to").value = "";
+			clean();
 		}
 		else {
 			if (get("#amount").value == "") get("#amount").value = 0;
@@ -610,20 +526,20 @@ button:disabled {
 		<button onclick="btn_add(1);">  +1  </button>
 		<button onclick="btn_add(5);">  +5  </button>
 		<button onclick="btn_add(10);"> +10 </button>
-		<button onclick="btn_add(0);"> Clean</button>		
-		</div>				
+		<button onclick="btn_add(50);"> +50</button>		
+		</div>
 		
         <!-- =========================================================== -->				
 		<!-- ======================== TRANSFER ========================= -->
-		<!-- =========================================================== -->		
-		<div    id = "transfer">
+		<!-- =========================================================== -->	
+		<div    id = "transferData">
 		<input  id="amount" class="add" type="text" value="" readonly /> <b>To</b>
-		<input  id="to" class="add" type="text" value="" />				
+		<input  id="to" class="add" type="text" value="" />
+		</div>		
+		<div    id = "transferButtons">
 		<button id="btn_transfer" onclick="btn_transfer();">Send</button>
+		<button onclick="btn_add(0);">CLEAN</button>
 		</div>
-		
-		<button style="color:Chartreuse;" class="bigbutton" id="mineButton" onclick="btn_mine();">Mine</button>
-		<button style="color:red;" class="bigbutton" id="stopButton" onclick="btn_stop();">Stop </button>		
 		</div>
 		
         <!-- =========================================================== -->				
@@ -632,7 +548,6 @@ button:disabled {
 		<div id="messages">
 		<div id="errorMessage" style="color:red;"></div>		
 		<div id="statusMessage" style="color:blue;"></div><br/>
-		<div id="greenMessage" style="color:green;"></div>
 		</div>
 		
 		<!-- =========================================================== -->				

@@ -1,6 +1,9 @@
 package caramel;
 
+import java.io.IOException;
 import java.math.BigInteger;
+import java.net.CookieHandler;
+import java.net.CookieManager;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -8,6 +11,7 @@ import java.security.interfaces.ECPublicKey;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 import org.json.JSONObject;
 
@@ -19,10 +23,55 @@ public class CaramelCat extends BasicApp {
 	private static Map<String, String> coins = new HashMap<>();
 	private static Map<String, String> minePrefix = new HashMap<>();
 	private static Map<String, Long> coinsPerDay = new HashMap<>();
+	private static String mine_prefix;
+	private static String mine_address;
+
+	// start mining thread
+	private static void miner() {
+		new Thread() {
+			@Override
+			public void run() {
+				long l = Long.MIN_VALUE;
+				while (true) {
+					try {
+						if (mine_address != null && mine_prefix != null && mine_address.length() == 43) {
+							Long nonce = new Random().nextLong();
+							String text = nonce + "_" + mine_address;
+							String hash = Crypto.sha256d(text);
+							String upper = hash.toUpperCase();
+
+							if (upper.startsWith("CAT" + mine_prefix)) {
+								print("Yeah! New cat coin! " + hash.substring(0, 6));
+								JSONObject json = new JSONObject();
+								json.put("method", "insertcoin");
+								json.put("address", mine_address);
+								json.put("nonce", nonce);
+								json = Static.request(json);
+							}
+							l++;
+							if (l % 1_000_000 == 0) print("mining..");
+
+						} else {
+							Thread.sleep(10_000);
+						}
+					} catch (Exception e) {
+						print(e.toString());
+					}
+				}
+			}
+		}.start();
+	}
 
 	public static void main(String[] args) throws Exception {
 		CaramelCat c = (CaramelCat) new CaramelCat(args).init();
-		if (args.length == 0) c.walletMode = true;
+
+		CookieManager cookieManager = new CookieManager();
+		CookieHandler.setDefault(cookieManager);
+
+		if (args.length == 0) {
+			c.walletMode = true;
+			miner();
+		}
 	}
 
 	private boolean walletMode = false;
@@ -87,18 +136,21 @@ public class CaramelCat extends BasicApp {
 		Long count = coinsPerDay.get(user);
 		if (count != null && count > 100) return response;
 
+		// check address size
+		String address = request.getString("address");
+		if (address.length() != 43) return response;
+
 		// get hash
 		Long nonce = request.getLong("nonce");
-		String address = request.getString("address");
 		String text = nonce + "_" + address;
-		String hash = Crypto.sha256d(nonce + "_" + address);
+		String hash = Crypto.sha256d(text);
 
 		// was this coin already mined?
 		if (coins.get(hash) != null) return response;
 
 		String upper = hash.toUpperCase();
 
-		if (upper.startsWith(prefix) || (debug() && upper.startsWith("C"))) {
+		if (upper.startsWith("CAT" + prefix)) {
 			Long balance = getLong(address);
 
 			put(address, ++balance);
@@ -115,15 +167,32 @@ public class CaramelCat extends BasicApp {
 		return response;
 	}
 
+	private JSONObject mine(String user, JSONObject request) {
+		JSONObject response = new JSONObject();
+		response.put("status", "error");
+
+		String address = request.getString("address");
+		if (address.length() == 43) {
+			print("starting mining");
+			mine_address = address;
+			response.put("status", "ok");
+		} else {
+			print("stoping mining");
+			mine_address = null;
+		}
+		return response;
+	}
+
 	private JSONObject ping(String user, JSONObject request) throws Exception {
 		String address = request.getString("address");
 		JSONObject response = new JSONObject();
 
-		response.put("balance", getLong(address));
+		Long balance = getLong(address);
+
+		response.put("balance", balance);
 		response.put("supply", getLong("supply"));
 
-		int prefixSize = 3;
-		if (debug()) prefixSize = 2;
+		int prefixSize = 2;
 		String prefix = Static.getSaltString(prefixSize);
 
 		minePrefix.put(user, prefix);
@@ -163,6 +232,7 @@ public class CaramelCat extends BasicApp {
 		String fromAddress = Crypto.sha256d(fromStrPubKey);
 		Long balance = getLong(fromAddress);
 
+		if (fromAddress.length() != 43 || to.length() != 43) return response;
 		if (fromAddress.equals(to)) return response;
 		if (sign.length() < 10) return response;
 		if (amount <= 0) return response;
@@ -190,6 +260,23 @@ public class CaramelCat extends BasicApp {
 	@Override
 	protected boolean debug() {
 		return false;
+	}
+
+	@Override
+	protected void each10Seconds() {
+		try {
+			if (walletMode && mine_address != null && mine_address.length() == 43) {
+				JSONObject json = new JSONObject();
+				json.put("method", "ping");
+				json.put("address", mine_address);
+				json = Static.request(json);
+				mine_prefix = json.getString("prefix");
+				print(mine_prefix);
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
 	}
 
 	@Override
@@ -242,6 +329,10 @@ public class CaramelCat extends BasicApp {
 				if (walletMode) return getbalance(user, request);
 				break;
 
+			case "mine":
+				if (walletMode) return mine(user, request);
+				break;
+
 			case "snapshot":
 				if (validPassword(request)) takeSnapshot();
 				break;
@@ -259,11 +350,16 @@ public class CaramelCat extends BasicApp {
 		coinsPerDay.clear();
 		JSONObject data = get();
 		String[] keys = JSONObject.getNames(data);
+		Long supply = 0L;
 		for (String k : keys) {
 			Object value = data.get(k);
+			// if invalid remove, else recalculate supply
 			if (!k.equals("supply") && k.length() != 43 || !(value instanceof Number)) {
 				data.remove(k);
+			} else if (k.length() == 43 && value instanceof Number) {
+				supply = supply + ((Number) value).longValue();
 			}
 		}
+		if (supply > 0) data.put("supply", supply);
 	}
 }
