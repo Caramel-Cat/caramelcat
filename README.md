@@ -8,7 +8,7 @@ Unlike other cryptos, this one you can mine. It's very easy, even if you're a do
 
 download latest release then
 
-**java -jar caramelcat-0.3-jar-with-dependencies.jar**
+**java -jar caramelcat-0.4-jar-with-dependencies.jar**
 
 ## Mining
 

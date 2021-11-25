@@ -22,7 +22,6 @@ public class CaramelCat extends BasicApp {
 
 	private static Map<String, String> coins = new HashMap<>();
 	private static Map<String, String> minePrefix = new HashMap<>();
-	private static Map<String, Long> coinsPerDay = new HashMap<>();
 	private static String mine_prefix;
 	private static String mine_address;
 
@@ -126,15 +125,11 @@ public class CaramelCat extends BasicApp {
 
 		// should we have max supply?
 		Long supply = getLong("supply");
-		if (supply >= 512_000) return response;
+		if (supply >= 1_000_000) return response;
 
 		// must has a prefix to mine (see ping)
 		String prefix = minePrefix.get(user);
 		if (prefix == null) return response;
-
-		// max 100 coins per user (http session)
-		Long count = coinsPerDay.get(user);
-		if (count != null && count > 100) return response;
 
 		// check address size
 		String address = request.getString("address");
@@ -157,10 +152,6 @@ public class CaramelCat extends BasicApp {
 			put("supply", ++supply);
 			coins.put(hash, text);
 
-			if (count == null) count = 0L;
-			else count++;
-			coinsPerDay.put(user, count);
-
 			response.put("status", "success");
 		} else throw new Exception("invalid coin");
 
@@ -173,12 +164,13 @@ public class CaramelCat extends BasicApp {
 
 		String address = request.getString("address");
 		if (address.length() == 43) {
-			print("starting mining");
+			print("starting mining..");
 			mine_address = address;
 			response.put("status", "ok");
 		} else {
-			print("stoping mining");
+			print("stoping mining..");
 			mine_address = null;
+			response.put("status", "ok");
 		}
 		return response;
 	}
@@ -347,19 +339,20 @@ public class CaramelCat extends BasicApp {
 
 	@Override
 	protected void prepareSnapshot() {
-		coinsPerDay.clear();
-		JSONObject data = get();
-		String[] keys = JSONObject.getNames(data);
-		Long supply = 0L;
-		for (String k : keys) {
-			Object value = data.get(k);
-			// if invalid remove, else recalculate supply
-			if (!k.equals("supply") && k.length() != 43 || !(value instanceof Number)) {
-				data.remove(k);
-			} else if (k.length() == 43 && value instanceof Number) {
-				supply = supply + ((Number) value).longValue();
+		if (!walletMode) {
+			JSONObject data = get();
+			String[] keys = JSONObject.getNames(data);
+			Long supply = 0L;
+			for (String k : keys) {
+				Object value = data.get(k);
+				// if invalid remove, else recalculate supply
+				if (!k.equals("supply") && k.length() != 43 || !(value instanceof Number)) {
+					data.remove(k);
+				} else if (k.length() == 43 && value instanceof Number) {
+					supply = supply + ((Number) value).longValue();
+				}
 			}
+			if (supply > 0) data.put("supply", supply);
 		}
-		if (supply > 0) data.put("supply", supply);
 	}
 }
