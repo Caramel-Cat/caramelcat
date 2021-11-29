@@ -1,6 +1,8 @@
 package webapp;
 
 import java.io.IOException;
+import java.net.CookieHandler;
+import java.net.CookieManager;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -182,12 +184,11 @@ public abstract class WebApp {
 
 	private final String password;
 
-	protected WebApp(String[] args) {
-		if (args.length == 1) {
-			password = args[0];
-		} else {
-			password = "123456";
-		}
+	protected WebApp() {
+		CookieManager cookieManager = new CookieManager();
+		CookieHandler.setDefault(cookieManager);
+		password = Static.getSaltString(16);
+		print("Your Password: " + password);
 	}
 
 	protected boolean avoidDoS() {
@@ -261,7 +262,7 @@ public abstract class WebApp {
 		factory.configurePrevalentSystem(new PersistentData());
 		factory.configureJournalSerializer("journal", new XStreamSerializer());
 		factory.configureSnapshotSerializer("snapshot", new XStreamSerializer());
-		if (WebApp.webapp.debug()) factory.configureTransientMode(true);
+		// if (WebApp.webapp.debug()) factory.configureTransientMode(true);
 		prevayler = factory.create();
 
 		startJettyHttpsServer();

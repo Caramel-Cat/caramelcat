@@ -4,10 +4,6 @@ import org.json.JSONObject;
 
 public abstract class BasicApp extends WebApp {
 
-	public BasicApp(String[] args) {
-		super(args);
-	}
-
 	@Override
 	protected JSONObject exec(String user, JSONObject request) throws Exception {
 		JSONObject response = new JSONObject();

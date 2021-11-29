@@ -2,8 +2,6 @@ package caramel;
 
 import java.io.IOException;
 import java.math.BigInteger;
-import java.net.CookieHandler;
-import java.net.CookieManager;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -26,7 +24,7 @@ public class CaramelCat extends BasicApp {
 	private static String mine_address;
 
 	// start mining thread
-	private static void miner() {
+	private static void prepare_miner() {
 		new Thread() {
 			@Override
 			public void run() {
@@ -62,22 +60,39 @@ public class CaramelCat extends BasicApp {
 	}
 
 	public static void main(String[] args) throws Exception {
-		CaramelCat c = (CaramelCat) new CaramelCat(args).init();
+		CaramelCat c = (CaramelCat) new CaramelCat().init();
 
-		CookieManager cookieManager = new CookieManager();
-		CookieHandler.setDefault(cookieManager);
+		// are you caramelcat.org?
+		c.nodeName = Static.getSaltString(16);
+		JSONObject json = new JSONObject();
+		json.put("method", "isYou");
+		json.put("nodeName", c.nodeName);
+		json = Static.request(json);
 
-		if (args.length == 0) {
-			c.walletMode = true;
-			miner();
+		// if true disable wallet mode
+		boolean isYou = json.getBoolean("status");
+		if (isYou) {
+			print("WARN: Wallet mode disabled");
+			c.walletMode = false;
+		}
+
+		if (c.debug()) {
+			print("DEBUG (Server mode)");
+			c.walletMode = false;
+		}
+
+		if (c.walletMode) prepare_miner();
+
+		// start mining
+		if (args.length == 1 && args[0].length() == 43) {
+			print("starting mining..");
+			mine_address = args[0];
 		}
 	}
 
-	private boolean walletMode = false;
+	private boolean walletMode = true;
 
-	public CaramelCat(String[] args) {
-		super(args);
-	}
+	private String nodeName;
 
 	private JSONObject all(String user, JSONObject request) throws Exception {
 		return get();
@@ -158,6 +173,13 @@ public class CaramelCat extends BasicApp {
 		return response;
 	}
 
+	private JSONObject isYou(String user, JSONObject request) {
+		JSONObject response = new JSONObject();
+		response.put("status", false);
+		if (request.getString("nodeName").equals(nodeName)) response.put("status", true);
+		return response;
+	}
+
 	private JSONObject mine(String user, JSONObject request) {
 		JSONObject response = new JSONObject();
 		response.put("status", "error");
@@ -184,7 +206,7 @@ public class CaramelCat extends BasicApp {
 		response.put("balance", balance);
 		response.put("supply", getLong("supply"));
 
-		int prefixSize = 2;
+		int prefixSize = 3;
 		String prefix = Static.getSaltString(prefixSize);
 
 		minePrefix.put(user, prefix);
@@ -325,9 +347,8 @@ public class CaramelCat extends BasicApp {
 				if (walletMode) return mine(user, request);
 				break;
 
-			case "snapshot":
-				if (validPassword(request)) takeSnapshot();
-				break;
+			case "isYou":
+				return isYou(user, request);
 
 			default:
 				throw new IllegalArgumentException("Unexpected value: " + method);
