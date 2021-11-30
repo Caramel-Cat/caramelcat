@@ -364,13 +364,16 @@ public class CaramelCat extends BasicApp {
 			JSONObject data = get();
 			String[] keys = JSONObject.getNames(data);
 			Long supply = 0L;
+			long balance = 0;
 			for (String k : keys) {
 				Object value = data.get(k);
 				// if invalid remove, else recalculate supply
 				if (!k.equals("supply") && k.length() != 43 || !(value instanceof Number)) {
 					data.remove(k);
 				} else if (k.length() == 43 && value instanceof Number) {
-					supply = supply + ((Number) value).longValue();
+					balance = ((Number) value).longValue();
+					if (balance == 0) data.remove(k);
+					else supply = supply + balance;
 				}
 			}
 			if (supply > 0) data.put("supply", supply);

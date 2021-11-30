@@ -48,10 +48,6 @@ font-size: small;
 width: 140px;
 }
 
-#messages {
-font-size: medium;
-}
-
 #amount {
 width: 60px;
 font-size: x-large;
@@ -130,19 +126,16 @@ button:disabled {
 	==================================================	
 	*/	
 
-	var debug = false;
-	
-	var myloop;
-	var stopbalanceLoop = true;
+	var debug = false;	
+	var myBalanceLoop = null;
+	var myCleanLoop = null;
+	var stopbalanceLoop = true;	
 
 	// load button load private and public keys
 	var privateKey = null;
 	var publicKey = null;
 	var pubkey64 = null;	
 	var address = null;
-	
-	// transfer
-	var to = ""
 	
 	/*
 	==================================================
@@ -154,14 +147,18 @@ button:disabled {
 		return document.querySelector(x);
 	}
 	
-	function error(msg) {		
+	function error(msg) {	
+		if (myCleanLoop != null) clearTimeout(myCleanLoop);
 		get("#errorMessage").innerHTML = msg;
 		show("#errorMessage");
+		myCleanLoop = setTimeout(clean, 5*1000);
 	}
 	
 	function status(msg) {		
+		if (myCleanLoop != null) clearTimeout(myCleanLoop);
 		get("#statusMessage").innerHTML = msg;
 		show("#statusMessage");
+		myCleanLoop = setTimeout(clean, 5*1000);
 	}
 	
 	function show(id) {
@@ -197,12 +194,24 @@ button:disabled {
 	    return bytes;
 	}
 	
+	function prepareRequest(callback) {
+		var xmlhttp = new XMLHttpRequest();
+		xmlhttp.open("POST", "/meow");
+		xmlhttp.setRequestHeader("Content-Type", "application/json");
+		xmlhttp.onreadystatechange = function() {
+	        if (this.readyState == 4 && this.status == 200) {
+	        	var json = JSON.parse(xmlhttp.responseText);
+	        	callback(json);
+	        }
+	    };	    
+	    return xmlhttp;		
+	}	
+	
 	/*
 	==================================================
 	=============== CRYPTO STUFF ==============
 	==================================================	
-	*/		
-	
+	*/			
 	async function sha256d(message) {
 		  const msgUint8 = new TextEncoder().encode(message);
 		  const hashBuffer = await crypto.subtle.digest('SHA-256', await crypto.subtle.digest('SHA-256', msgUint8));
@@ -223,58 +232,51 @@ button:disabled {
 		   );
 		 }    	  
 		 
-	 	  async function exportCryptoKey(key) {
-	 	    const exported = await window.crypto.subtle.exportKey(
-	 	      "jwk",
-	 	      key
-	 	    );
-	 	    delete exported["crv"];
-	 	    delete exported["kty"];
-	 	    delete exported["key_ops"];
-	 	    delete exported["ext"];    	    
-	 	    jsonKey = JSON.stringify(exported, null, " ");
-	 	    const exportKeyOutput = get("#keysTextArea"); 	    
-	 	    exportKeyOutput.value = jsonKey;
-	 	    
-	 	    // if address (address) contains '-' or '_' gen another key
-	 	    pubkeyHex = "04" + toHexString(base64DecodeURL(exported.x)) + toHexString(base64DecodeURL(exported.y));	 	    
-	 	    pubkey64 = base64EncodeURL(hexToBytes(pubkeyHex));
-	 	    
-			sha256d(pubkey64).then((sha) =>{
-				address = base64EncodeURL(sha);
-				if (address.includes("-") || address.includes("_")) {
-					setTimeout(btn_genKeys, 1); // try again
-				}
-			});	 	    
-	 	  }
+ 	  async function exportCryptoKey(key) {
+ 	    const exported = await window.crypto.subtle.exportKey(
+ 	      "jwk",
+ 	      key
+ 	    );
+ 	    delete exported["crv"];
+ 	    delete exported["kty"];
+ 	    delete exported["key_ops"];
+ 	    delete exported["ext"];    	    
+ 	    jsonKey = JSON.stringify(exported, null, " ");
+ 	    const exportKeyOutput = get("#keysTextArea"); 	    
+ 	    exportKeyOutput.value = jsonKey;
+ 	    
+ 	    // if address (address) contains '-' or '_' gen another key
+ 	    pubkeyHex = "04" + toHexString(base64DecodeURL(exported.x)) + toHexString(base64DecodeURL(exported.y));	 	    
+ 	    pubkey64 = base64EncodeURL(hexToBytes(pubkeyHex));
+ 	    
+		sha256d(pubkey64).then((sha) =>{
+			address = base64EncodeURL(sha);
+			if (address.includes("-") || address.includes("_")) {
+				setTimeout(btn_genKeys, 1); // try again
+			}
+		});	 	    
+ 	  }
 	
 	/*
 	==================================================
 	=================== SHOW / HIDE ==================
 	==================================================	
-	*/	
-	
-	function start() {
-		
+	*/		
+	function start() {		
 		if (debug) show("#debugMessage");
 		else hide("#debugMessage");
 		
-		if (true) initialScreen();
-		
+		initialScreen();		
 		btn_genKeys(); // why not?
 		setTimeout(btn_loadKeys, 1000);		
 	}	
 	
 	function initialScreen() {
-		clearTimeout(myloop);
+		clearTimeout(myBalanceLoop);
 		stopbalanceLoop = true;
 		show("#initialScreen");
 		hide("#walletScreen");
 		hide("#footer");
-	}
-	
-	function cleanSlow() {
-		setTimeout(clean, 100);
 	}
 	
 	function clean() {
@@ -290,35 +292,32 @@ button:disabled {
 		show("#footer");
 	}
 	
-	function balanceLoop() {
+	/*
+	==================================================
+	=================== BALANCE LOOP =================
+	==================================================	
+	*/
+	function callBackBalance(json) {
+    	if (json["balance"] ==  null) {
+    		json["balance"] = "Loading...";
+    		json["supply"] = "Loading...";
+    	}
+    	get("#balance").innerHTML = "<b>Your balance: " + json["balance"] + "</b><br/>Circulating Supply: " + json["supply"];
+    	if (json["prefix"] != null) prefix = json["prefix"];
+    	if (json["debug"] != null) debug = true;
+    	else  debug = false;		
+	}
+	
+	function balanceLoop() {		
+		if (myBalanceLoop != null) clearTimeout(myBalanceLoop);
 		
-		if (myloop != null) clearTimeout(myloop);
-		
-		function getbalance() {
-			var xmlhttp = new XMLHttpRequest(); 
-			xmlhttp.open("POST", "/meow");
-			xmlhttp.setRequestHeader("Content-Type", "application/json");
-			xmlhttp.onreadystatechange = function() {
-		        if (this.readyState == 4 && this.status == 200) {
-		        	var json = JSON.parse(xmlhttp.responseText);
-		        	if (json["balance"] ==  null) {
-		        		json["balance"] = "Loading...";
-		        		json["supply"] = "Loading...";
-		        	}
-		        	get("#balance").innerHTML = "<b>Your balance: " + json["balance"] + "</b><br/>Circulating Supply: " + json["supply"];
-		        	if (json["prefix"] != null) prefix = json["prefix"];
-		        	if (json["debug"] != null) debug = true;
-		        	else  debug = false;
-		        }
-		    };	    
-			xmlhttp.send(JSON.stringify({'method':'ping', address:address}));
-			
-			if (!stopbalanceLoop)
-				myloop = setTimeout(getbalance, 10*1000);			
+		function getbalance() {			
+			balanceRequest = prepareRequest(callBackBalance);    
+			balanceRequest.send(JSON.stringify({'method':'ping', address:address}));			
+			if (!stopbalanceLoop) myBalanceLoop = setTimeout(getbalance, 10*1000);			
 		}
 		
-		if (!stopbalanceLoop)
-			myloop = setTimeout(getbalance, 1);			
+		if (!stopbalanceLoop) myBalanceLoop = setTimeout(getbalance, 1);			
 	} 
 	
 	/*
@@ -334,7 +333,6 @@ button:disabled {
 	  can generate a new one or copy an old one in text area.
 	*/  	  
 	   function btn_genKeys() {
-		console.log("btn_genKeys");
 	  	clean();	
 	   	var keyPair = window.crypto.subtle.generateKey( 
 	   	    {
@@ -353,7 +351,6 @@ button:disabled {
 		  Get text area data and generate globals privatekey, publickey and pubkey64. 
 		*/  		
 	function btn_loadKeys() {
-		console.log("btn_loadKeys");
 		clean();
 		jwkKey = get("#keysTextArea").value;
 		if (jwkKey.trim() == "") {
@@ -379,38 +376,31 @@ button:disabled {
 		pubkeyHex = "04" + toHexString(base64DecodeURL(json.x)) + toHexString(base64DecodeURL(json.y));
 		pubkey64 = base64EncodeURL(hexToBytes(pubkeyHex));
 		
-		console.log(pubkey64);
-		
 		sha256d(pubkey64).then((sha) =>{
 			address = base64EncodeURL(sha);
-			console.log(address);
 		});
 				
 		showWallet();
 	}
 	  	
-	function prepareRequest(callback) {
-		var xmlhttp = new XMLHttpRequest();
-		xmlhttp.open("POST", "/meow");
-		xmlhttp.setRequestHeader("Content-Type", "application/json");
-		xmlhttp.onreadystatechange = function() {
-	        if (this.readyState == 4 && this.status == 200) {
-	        	var json = JSON.parse(xmlhttp.responseText);
-	        	callback(json);
-	        }
-	    };	    
-	    return xmlhttp;		
-	}
-	
 	function callBackTransfer(json) {
-		 console.log("callBackTransfer");
-		 console.log(json);
+		 if (json["status"] == "success") status("Transfer completed successfully!");
+		 else error("error");
 	}	
 	
 	function btn_transfer() {
-		console.log("btn_transfer");
 		to = get("#to").value;
 		amount = get("#amount").value;
+		
+		if (to == "") {
+			error("send to?");
+			return;
+		}
+		if (amount == "") {
+			error("no amount");
+			return;
+		}
+		
 		transfer = prepareRequest(callBackTransfer);
 		
 		let enc = new TextEncoder();
@@ -425,11 +415,25 @@ button:disabled {
 				    transfer.send(JSON.stringify({'method':'transfer', from:pubkey64, to:to, amount:amount, sign:base64EncodeURL(new Int8Array(signature))}));
 		  	    });	
 	    
-		get("#to").value = "";
-		get("#amount").value = "";
+		get("#amount").value = ""; 		
 				
 		setTimeout(balanceLoop, 1000);		
  	}  	
+	
+	function callBackBalanceOf(json) {
+    	if (json["balance"] !=  null) {
+    		status("(S)He's got " + json["balance"] + " coins.");
+    	}
+	}
+	
+	function btn_balanceof() {
+		to = get("#to").value;
+		
+		if (to != "" && to.length== 43) {
+			balanceRequest = prepareRequest(callBackBalanceOf);    
+			balanceRequest.send(JSON.stringify({'method':'ping', address:to}));
+		} else error("invalid address");
+	}
 	  	
 	function btn_copyKeys() {
 		clean();
@@ -491,10 +495,6 @@ button:disabled {
 		}
 	}
 	
-	function seeMyCoins() {
-		get("#mycoinslink").href = "/meow/owner=" + address;
-	}
-	
     </script>
 </head>
 
@@ -512,7 +512,6 @@ button:disabled {
 		<button style="color:yellow;" onclick="btn_copyKeys();">Copy</button>
 		<button onclick="btn_genKeys();"> New Key</button>												
 		<button onclick="btn_loadKeys();">LOAD   </button>
-		<!-- <button onclick="btn_clean();"> Clean       </button> -->
 		</div>
 				
         <!-- =========================================================== -->				
@@ -532,20 +531,21 @@ button:disabled {
         <!-- =========================================================== -->				
 		<!-- ======================== TRANSFER ========================= -->
 		<!-- =========================================================== -->	
-		<div    id = "transferData">
+		<div>
 		<input  id="amount" class="add" type="text" value="" readonly /> <b>To</b>
 		<input  id="to" class="add" type="text" value="" />
 		</div>		
-		<div    id = "transferButtons">
-		<button id="btn_transfer" onclick="btn_transfer();">Send</button>
+		<div>
 		<button onclick="btn_add(0);">CLEAN</button>
+		<button onclick="btn_balanceof();" class="bigbutton">Balance Of</button>
+		<button onclick="btn_transfer();">Send</button>
 		</div>
 		</div>
 		
         <!-- =========================================================== -->				
 		<!-- ======================= MESSAGES ========================== -->
 		<!-- =========================================================== -->
-		<div id="messages">
+		<div>
 		<div id="errorMessage" style="color:red;"></div>		
 		<div id="statusMessage" style="color:blue;"></div><br/>
 		</div>
@@ -554,7 +554,6 @@ button:disabled {
 		<!-- ========================= FOOTER ========================== -->
 		<!-- =========================================================== -->		
 		<div id="footer">
-		<!-- <a id="mycoinslink" target="_blank" href="#" onclick="seeMyCoins(); return true;">see my coins</a><br/>  -->
 		<a target="_blank" href="/whitepaper.html">info</a>	
 		</div>
 </div>	
