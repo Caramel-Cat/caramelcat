@@ -186,6 +186,45 @@ public abstract class WebApp {
 		print("Your Password: " + password);
 	}
 
+	private void startCron() {
+		new Thread() {
+
+			@Override
+			public void run() {
+				print("starting cron..");
+				long l = 0L;
+				while (true) {
+					try {
+						Thread.sleep(1_000); // 1s
+						if (WebApp.stop) {
+							print("stopping cron..");
+							return;
+						}
+						l++;
+						if (l % 86400 == 0) {
+							eachDay();
+							takeSnapshot();
+						}
+						if (l % 3600 == 0) eachHour();
+						if (l % 120 == 0) each2Minutes();
+						if (l % 60 == 0) eachMinute();
+						if (l % 10 == 0) {
+							each10Seconds();
+							floodIps.clear();
+						}
+						eachSecond();
+
+						if (l == Long.MAX_VALUE) l = 0L;
+
+					} catch (Exception e) {
+						print(e.toString());
+					}
+				}
+			}
+
+		}.start();
+	}
+
 	protected boolean avoidDoS() {
 		return true;
 	}
@@ -225,7 +264,7 @@ public abstract class WebApp {
 
 	protected Long getLong(String key) {
 		JSONObject data = prevayler.prevalentSystem().data;
-		if (data.has(key) && data.get(key) instanceof Number) return prevayler.prevalentSystem().data.getLong(key);
+		if (data.has(key) && data.get(key) instanceof Number) return data.getLong(key);
 		else return 0L;
 	}
 
@@ -237,7 +276,7 @@ public abstract class WebApp {
 
 	protected String getString(String key) {
 		JSONObject data = prevayler.prevalentSystem().data;
-		if (data.has(key)) return prevayler.prevalentSystem().data.getString(key);
+		if (data.has(key)) return data.getString(key);
 		else return null;
 	}
 
@@ -255,44 +294,7 @@ public abstract class WebApp {
 		prevayler = factory.create();
 
 		startJettyHttpsServer();
-
-		// cron
-		new Thread() {
-
-			@Override
-			public void run() {
-				print("starting cron..");
-				long l = 0L;
-				while (true) {
-					try {
-						Thread.sleep(1_000); // 1s
-						if (WebApp.stop) {
-							print("stopping cron..");
-							return;
-						}
-						l++;
-						if (l % 86400 == 0) {
-							eachDay();
-							takeSnapshot();
-						}
-						if (l % 3600 == 0) eachHour();
-						if (l % 120 == 0) each2Minutes();
-						if (l % 60 == 0) eachMinute();
-						if (l % 10 == 0) {
-							each10Seconds();
-							floodIps.clear();
-						}
-						eachSecond();
-
-						if (l == Long.MAX_VALUE) l = 0L;
-
-					} catch (Exception e) {
-						print(e.toString());
-					}
-				}
-			}
-
-		}.start();
+		startCron();
 
 		print("system started!");
 		return this;
