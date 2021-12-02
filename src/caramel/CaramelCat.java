@@ -18,10 +18,23 @@ import webapp.Static;
 
 public class CaramelCat extends BasicApp {
 
+	// control coin mining
 	private static Map<String, String> coins = new HashMap<>();
 	private static Map<String, String> minePrefix = new HashMap<>();
 	private static String mine_prefix;
 	private static String mine_address;
+
+	// server or wallet mode
+	private static boolean walletMode = true;
+	private static String nodeName;
+
+	private static boolean isServerMode() {
+		return !walletMode;
+	}
+
+	private static boolean isWalletMode() {
+		return walletMode;
+	}
 
 	// start mining thread
 	private static void prepare_miner() {
@@ -29,16 +42,17 @@ public class CaramelCat extends BasicApp {
 			@Override
 			public void run() {
 				long l = Long.MIN_VALUE;
+				Random random = new Random();
 				while (true) {
 					try {
 						if (mine_address != null && mine_prefix != null && mine_address.length() == 43) {
-							Long nonce = new Random().nextLong();
+							Long nonce = random.nextLong();
 							String text = nonce + "_" + mine_address;
 							String hash = Crypto.sha256d(text);
 							String upper = hash.toUpperCase();
 
 							if (upper.startsWith("CAT" + mine_prefix)) {
-								print("Yeah! New cat coin! " + hash.substring(0, 6));
+								print("Yeah! New cat coin! " + hash.substring(0, 6) + "..");
 								JSONObject json = new JSONObject();
 								json.put("method", "insertcoin");
 								json.put("address", mine_address);
@@ -60,28 +74,31 @@ public class CaramelCat extends BasicApp {
 	}
 
 	public static void main(String[] args) throws Exception {
+		if (nodeName != null) return;
+
+		// start http server and load database
 		CaramelCat c = (CaramelCat) new CaramelCat().init();
 
 		// are you caramelcat.org?
-		c.nodeName = Static.getSaltString(16);
+		nodeName = Static.getSaltString(16);
 		JSONObject json = new JSONObject();
 		json.put("method", "isYou");
-		json.put("nodeName", c.nodeName);
+		json.put("nodeName", nodeName);
 		json = Static.request(json);
 
 		// if true disable wallet mode
 		boolean isYou = json.getBoolean("status");
 		if (isYou) {
 			print("WARN: Wallet mode disabled");
-			c.walletMode = false;
+			walletMode = false;
 		}
 
 		if (c.debug()) {
 			print("DEBUG (Server mode)");
-			c.walletMode = false;
+			walletMode = false;
 		}
 
-		if (c.walletMode) prepare_miner();
+		if (walletMode) prepare_miner();
 
 		// start mining
 		if (args.length == 1 && args[0].length() == 43) {
@@ -90,15 +107,11 @@ public class CaramelCat extends BasicApp {
 		}
 	}
 
-	private boolean walletMode = true;
-
-	private String nodeName;
-
 	private JSONObject all(String user, JSONObject request) throws Exception {
 		return get();
 	}
 
-	private synchronized JSONObject getbalance(String user, JSONObject request) throws Exception {
+	private JSONObject getbalance(String user, JSONObject request) throws Exception {
 		request.put("method", "ping");
 		JSONObject response = Static.request(request);
 		response.remove("supply");
@@ -216,7 +229,7 @@ public class CaramelCat extends BasicApp {
 		return response;
 	}
 
-	private synchronized JSONObject sendtoaddress(String user, JSONObject request) throws Exception {
+	private JSONObject sendtoaddress(String user, JSONObject request) throws Exception {
 		String from = request.getString("from");
 		String to = request.getString("to");
 		Long amount = request.getLong("amount");
@@ -309,50 +322,47 @@ public class CaramelCat extends BasicApp {
 	}
 
 	@Override
-	protected JSONObject my_exec(String user, JSONObject request) throws Exception {
+	protected JSONObject my_exec(String method, String user, JSONObject request) throws Exception {
 
-		if (request.has("method")) {
-			String method = request.getString("method");
-			switch (method) {
+		switch (method) {
 
-			case "insertcoin":
-				if (!walletMode) return insertcoin(user, request);
-				break;
+		case "insertcoin":
+			if (isServerMode()) return insertcoin(user, request);
+			break;
 
-			case "transfer":
-				if (!walletMode) return transfer(user, request);
-				break;
+		case "transfer":
+			if (isServerMode()) return transfer(user, request);
+			break;
 
-			case "ping":
-				if (!walletMode) return ping(user, request);
-				break;
+		case "ping":
+			if (isServerMode()) return ping(user, request);
+			break;
 
-			case "all":
-				if (!walletMode) return all(user, request);
-				break;
+		case "all":
+			if (isServerMode()) return all(user, request);
+			break;
 
-			case "getnewaddress":
-				if (walletMode) return getnewaddress(user, request);
-				break;
+		case "getnewaddress":
+			if (isWalletMode()) return getnewaddress(user, request);
+			break;
 
-			case "sendtoaddress":
-				if (walletMode) return sendtoaddress(user, request);
-				break;
+		case "sendtoaddress":
+			if (isWalletMode()) return sendtoaddress(user, request);
+			break;
 
-			case "getbalance":
-				if (walletMode) return getbalance(user, request);
-				break;
+		case "getbalance":
+			if (isWalletMode()) return getbalance(user, request);
+			break;
 
-			case "mine":
-				if (walletMode) return mine(user, request);
-				break;
+		case "mine":
+			if (isWalletMode()) return mine(user, request);
+			break;
 
-			case "isYou":
-				return isYou(user, request);
+		case "isYou":
+			return isYou(user, request);
 
-			default:
-				throw new IllegalArgumentException("Unexpected value: " + method);
-			}
+		default:
+			throw new IllegalArgumentException("Unexpected value: " + method);
 		}
 
 		throw new IllegalArgumentException("Unexpected value");
@@ -360,7 +370,7 @@ public class CaramelCat extends BasicApp {
 
 	@Override
 	protected void prepareSnapshot() {
-		if (!walletMode) {
+		if (isServerMode()) {
 			JSONObject data = get();
 			String[] keys = JSONObject.getNames(data);
 			Long supply = 0L;
@@ -379,4 +389,5 @@ public class CaramelCat extends BasicApp {
 			if (supply > 0) data.put("supply", supply);
 		}
 	}
+
 }

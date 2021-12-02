@@ -23,13 +23,13 @@ public abstract class BasicApp extends WebApp {
 			if (validPassword(request)) throw new RuntimeException("something wrong");
 
 		default:
-			response = my_exec(user, request);
+			response = my_exec(method, user, request);
 			break;
 
 		}
 		return response;
 	}
 
-	protected abstract JSONObject my_exec(String user, JSONObject request) throws Exception;
+	protected abstract JSONObject my_exec(String method, String user, JSONObject request) throws Exception;
 
 }

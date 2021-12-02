@@ -35,8 +35,6 @@ import org.prevayler.Prevayler;
 import org.prevayler.PrevaylerFactory;
 import org.prevayler.foundation.serialization.XStreamSerializer;
 
-import com.sun.net.httpserver.HttpsServer;
-
 public abstract class WebApp {
 
 	public static class MyHandler extends DefaultServlet {
@@ -88,7 +86,6 @@ public abstract class WebApp {
 				if (requestJSON != null) {
 
 					responseJSON = doIt(request.getSession(), requestJSON);
-
 					if (responseJSON == null) return;
 
 					strResponse = (responseJSON == null ? "" : responseJSON.toString());
@@ -107,8 +104,6 @@ public abstract class WebApp {
 	private static Map<String, Long> floodIps = new Hashtable<String, Long>();
 
 	private static WebApp webapp;
-
-	private static HttpsServer httpsServer = null;
 
 	private static Prevayler<PersistentData> prevayler;
 
@@ -222,12 +217,6 @@ public abstract class WebApp {
 	protected void exit() {
 		print("exiting..");
 		stop = true;
-//		httpsServer.stop(0);
-//		try {
-//			Thread.sleep(2500);
-//		} catch (InterruptedException e) {
-//		}
-//		System.exit(0);
 	}
 
 	protected JSONObject get() {
@@ -311,9 +300,12 @@ public abstract class WebApp {
 
 	protected abstract void prepareSnapshot();
 
-	protected void put(String key, Object value) {
-		if (value instanceof String) prevayler.execute(new TxString("put", key, (String) value));
-		else if (value instanceof Long) prevayler.execute(new TxLong("put", key, (Long) value));
+	protected void put(String key, Long value) {
+		prevayler.execute(new TxLong("put", key, value));
+	}
+
+	protected void put(String key, String value) {
+		prevayler.execute(new TxString("put", key, value));
 	}
 
 	protected void remove(String key) {
