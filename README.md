@@ -2,7 +2,7 @@
 
 Not another dog coin. [CaramelCat](https://caramelcat.org/)
 
-Unlike other cryptos, this one you can mine. It's very easy, even if you're a dog.
+There is no coins, only shitcoins.
 
 ## How to run
 
