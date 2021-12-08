@@ -1,4 +1,4 @@
-## Caramel Cat
+## Caramel Cat (CACA)
 
 Not another dog coin. [CaramelCat](https://caramelcat.org/)
 
