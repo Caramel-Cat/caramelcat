@@ -18,6 +18,9 @@ import webapp.Static;
 
 public class CaramelCat extends BasicApp {
 
+	// used to mine
+	private static String coinName = "CACA";
+
 	// server control new coins
 	private static Map<String, String> coins = new HashMap<>();
 	private static Map<String, String> minePrefix = new HashMap<>();
@@ -55,8 +58,8 @@ public class CaramelCat extends BasicApp {
 							String hash = Crypto.sha256d(text);
 							String upper = hash.toUpperCase();
 
-							if (upper.startsWith("CACA" + mine_prefix)) {
-								print("Yeah! New cat coin! " + hash.substring(0, 6) + "..");
+							if (upper.startsWith(coinName + mine_prefix)) {
+								print("Yeah! New caca coin! " + hash.substring(0, 6) + "..");
 								JSONObject json = new JSONObject();
 								json.put("method", "insertcoin");
 								json.put("address", mine_address);
@@ -182,7 +185,7 @@ public class CaramelCat extends BasicApp {
 
 		String upper = hash.toUpperCase();
 
-		if (upper.startsWith("CACA" + prefix)) {
+		if (upper.startsWith(coinName + prefix)) {
 			Long balance = getLong(address);
 
 			put(address, ++balance);
