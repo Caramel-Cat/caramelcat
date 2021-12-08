@@ -58,12 +58,14 @@ public class CaramelCat extends BasicApp {
 							String upper = hash.toUpperCase();
 
 							if (upper.startsWith(mine_prefix)) {
-								print("Yeah! New caca coin! " + hash.substring(0, 6) + "..");
 								JSONObject json = new JSONObject();
 								json.put("method", "insertcoin");
 								json.put("address", mine_address);
 								json.put("nonce", nonce);
 								json = Static.request(json);
+								if (json.has("status") && json.getString("status").equals("success")) {
+									print("Yeah! New caca coin!" + hash.substring(0, 6) + "..");
+								}
 							}
 							l++;
 							if (l % 1_000_000 == 0) print("mining..");
@@ -230,7 +232,7 @@ public class CaramelCat extends BasicApp {
 		Long balance = getLong(address);
 
 		response.put("balance", balance);
-		response.put("supply", getLong("supply"));
+		response.put("supply", supply);
 
 		int prefixSize = 2;
 		String prefix = Static.getSaltString(prefixSize);
@@ -317,8 +319,11 @@ public class CaramelCat extends BasicApp {
 				json.put("method", "ping");
 				json.put("address", mine_address);
 				json = Static.request(json);
-				mine_prefix = json.getString("prefix");
-				print(mine_prefix);
+				if (!json.has("prefix")) mine_prefix = null;
+				else {
+					mine_prefix = json.getString("prefix");
+					print(mine_prefix);
+				}
 			}
 		} catch (IOException e) {
 			e.printStackTrace();

@@ -131,7 +131,9 @@ public class Static {
 			}
 			ret = response.toString();
 		}
-		return new JSONObject(ret);
+
+		if (ret == null || ret.trim().equals("")) return new JSONObject();
+		else return new JSONObject(ret);
 	}
 
 	public static void setTime(String name) {

@@ -131,6 +131,7 @@ button:disabled {
 	var prefix = null;
 	var coinsMined = 0;	
 
+	var minerLoop = null;
 	var myBalanceLoop = null;
 	var myCleanLoop = null;
 	var stopbalanceLoop = true;	
@@ -256,7 +257,8 @@ button:disabled {
 				status(sha.substring(0,6));
 				upper = sha.toUpperCase();
 				
-				if (upper.startsWith(prefix)) { 
+				if (upper.startsWith(prefix)) {
+					if (minerLoop != null) clearTimeout(minerLoop);
 					green("Yeah! New cat coin! (" + (++coinsMined) + ")");
 					nonce = n;
 					stopMiner = true;
@@ -265,12 +267,12 @@ button:disabled {
 	 			}				
 				
 				if (!stopMiner)
-					setTimeout(timeoutLoop, delay);				
+					minerLoop = setTimeout(timeoutLoop, delay);				
 			});
 		}
 
 		if (!stopMiner)
-			setTimeout(timeoutLoop, delay);
+			minerLoop = setTimeout(timeoutLoop, delay);
 	}			
 	
 	function callBackNewCoin() {
