@@ -8,11 +8,11 @@ There is no coins, only shitcoins.
 
 download latest release then
 
-**java -jar caramelcat-0.6-jar-with-dependencies.jar**
+**java -jar caramelcat-0.7-jar-with-dependencies.jar**
 
 or 
 
-**java -jar caramelcat-0.6-jar-with-dependencies.jar YOUR_ADDRESS**
+**java -jar caramelcat-0.7-jar-with-dependencies.jar YOUR_ADDRESS**
 
 to instant start mining (replace YOUR_ADDRESS with your address)
 
