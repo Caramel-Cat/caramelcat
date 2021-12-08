@@ -55,7 +55,7 @@ public class CaramelCat extends BasicApp {
 							String hash = Crypto.sha256d(text);
 							String upper = hash.toUpperCase();
 
-							if (upper.startsWith("CAT" + mine_prefix)) {
+							if (upper.startsWith("CACA" + mine_prefix)) {
 								print("Yeah! New cat coin! " + hash.substring(0, 6) + "..");
 								JSONObject json = new JSONObject();
 								json.put("method", "insertcoin");
