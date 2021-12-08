@@ -506,7 +506,7 @@ button:disabled {
 	
 	function callBackBalanceOf(json) {
     	if (json["balance"] !=  null) {
-    		status("(S)He's got " + json["balance"] + " coins.");
+    		status("(S)He's got " + (json["balance"]/10_000).format(4, 3, ',', '.') + " coins.");
     	}
 	}
 	
