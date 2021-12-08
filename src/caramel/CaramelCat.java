@@ -18,6 +18,8 @@ import webapp.Static;
 
 public class CaramelCat extends BasicApp {
 
+	private static long supply = 0;
+
 	// server control new coins
 	private static Map<String, String> coins = new HashMap<>();
 	private static Map<String, String> minePrefix = new HashMap<>();
@@ -107,6 +109,7 @@ public class CaramelCat extends BasicApp {
 		if (isYou) {
 			print("WARN: Wallet mode disabled. Server mode on.");
 			walletMode = false;
+			c.prepareSnapshot();
 		}
 
 		if (walletMode) prepare_miner();
@@ -163,8 +166,7 @@ public class CaramelCat extends BasicApp {
 		response.put("status", "error");
 
 		// should we have max supply?
-		Long supply = getLong("supply");
-		if (supply >= 1_000_000) return response;
+		if (supply >= 1_000_000_0000L) return response;
 
 		// must has a prefix to mine (see ping)
 		String prefix = minePrefix.get(user);
@@ -188,7 +190,7 @@ public class CaramelCat extends BasicApp {
 			Long balance = getLong(address);
 
 			put(address, ++balance);
-			put("supply", ++supply);
+			supply++;
 			coins.put(hash, text);
 
 			response.put("status", "success");
@@ -297,12 +299,13 @@ public class CaramelCat extends BasicApp {
 
 	@Override
 	protected boolean debug() {
-		return true;
+		return false;
 	}
 
 	@Override
 	protected void each10Seconds() {
 		minePrefix.clear();
+		coins.clear();
 	}
 
 	@Override
@@ -385,12 +388,11 @@ public class CaramelCat extends BasicApp {
 		if (isServerMode()) {
 			JSONObject data = get();
 			String[] keys = JSONObject.getNames(data);
-			Long supply = 0L;
 			long balance = 0;
 			for (String k : keys) {
 				Object value = data.get(k);
 				// if invalid remove, else recalculate supply
-				if (!k.equals("supply") && k.length() != 43 || !(value instanceof Number)) {
+				if (k.length() != 43 || !(value instanceof Number)) {
 					data.remove(k);
 				} else if (k.length() == 43 && value instanceof Number) {
 					balance = ((Number) value).longValue();
@@ -398,7 +400,6 @@ public class CaramelCat extends BasicApp {
 					else supply = supply + balance;
 				}
 			}
-			if (supply > 0) data.put("supply", supply);
 		}
 	}
 }
