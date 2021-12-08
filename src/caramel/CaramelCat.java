@@ -182,7 +182,7 @@ public class CaramelCat extends BasicApp {
 
 		String upper = hash.toUpperCase();
 
-		if (upper.startsWith("CAT" + prefix)) {
+		if (upper.startsWith("CACA" + prefix)) {
 			Long balance = getLong(address);
 
 			put(address, ++balance);
