@@ -74,7 +74,7 @@ public abstract class WebApp {
 					Long l = floodIps.get(ip);
 					if (l == null) l = 0L;
 					floodIps.put(ip, ++l);
-					if (l >= 5) {
+					if (l >= 20) {
 						// show to decide block this ip or not
 						print("doGet-floodIps:" + ip);
 						return;
@@ -212,6 +212,7 @@ public abstract class WebApp {
 							each10Seconds();
 							floodIps.clear();
 						}
+						if (l % 3 == 0) each3Seconds();
 						eachSecond();
 
 						if (l == Long.MAX_VALUE) l = 0L;
@@ -237,6 +238,9 @@ public abstract class WebApp {
 	}
 
 	protected void each2Minutes() {
+	}
+
+	protected void each3Seconds() {
 	}
 
 	protected void eachDay() {

@@ -18,9 +18,6 @@ import webapp.Static;
 
 public class CaramelCat extends BasicApp {
 
-	// used to mine
-	private static String coinName = "CACA";
-
 	// server control new coins
 	private static Map<String, String> coins = new HashMap<>();
 	private static Map<String, String> minePrefix = new HashMap<>();
@@ -58,7 +55,7 @@ public class CaramelCat extends BasicApp {
 							String hash = Crypto.sha256d(text);
 							String upper = hash.toUpperCase();
 
-							if (upper.startsWith(coinName + mine_prefix)) {
+							if (upper.startsWith(mine_prefix)) {
 								print("Yeah! New caca coin! " + hash.substring(0, 6) + "..");
 								JSONObject json = new JSONObject();
 								json.put("method", "insertcoin");
@@ -92,6 +89,13 @@ public class CaramelCat extends BasicApp {
 		// start http server and load database
 		CaramelCat c = (CaramelCat) new CaramelCat().init();
 
+		// debug = server mode
+		if (c.debug()) {
+			print("DEBUG (Server mode on)");
+			walletMode = false;
+			return;
+		}
+
 		// are you caramelcat.org?
 		JSONObject json = new JSONObject();
 		json.put("method", "isYou");
@@ -102,11 +106,6 @@ public class CaramelCat extends BasicApp {
 		boolean isYou = json.getBoolean("status");
 		if (isYou) {
 			print("WARN: Wallet mode disabled. Server mode on.");
-			walletMode = false;
-		}
-
-		if (c.debug()) {
-			print("DEBUG (Server mode on)");
 			walletMode = false;
 		}
 
@@ -185,7 +184,7 @@ public class CaramelCat extends BasicApp {
 
 		String upper = hash.toUpperCase();
 
-		if (upper.startsWith(coinName + prefix)) {
+		if (upper.startsWith(prefix)) {
 			Long balance = getLong(address);
 
 			put(address, ++balance);
@@ -231,7 +230,7 @@ public class CaramelCat extends BasicApp {
 		response.put("balance", balance);
 		response.put("supply", getLong("supply"));
 
-		int prefixSize = 3;
+		int prefixSize = 2;
 		String prefix = Static.getSaltString(prefixSize);
 
 		minePrefix.put(user, prefix);
@@ -276,10 +275,10 @@ public class CaramelCat extends BasicApp {
 		if (sign.length() < 10) return response;
 		if (amount <= 0) return response;
 
-		if (balance >= amount) {
+		if (balance >= (amount + 1)) { // +1 (tx fee)
 			PublicKey fromPubKey = Crypto.getPublicKey(fromStrPubKey);
 			if (Crypto.verify(fromPubKey, fromAddress + to + amount, sign)) {
-				Long change = balance - amount;
+				Long change = balance - (amount + 1);
 				Long update = getLong(to) + amount;
 
 				put(to, update);
@@ -298,11 +297,16 @@ public class CaramelCat extends BasicApp {
 
 	@Override
 	protected boolean debug() {
-		return false;
+		return true;
 	}
 
 	@Override
 	protected void each10Seconds() {
+		minePrefix.clear();
+	}
+
+	@Override
+	protected void each3Seconds() {
 		try {
 			// if mining mode then get mine_prefix to start mine
 			if (isMiningMode()) {
@@ -317,11 +321,6 @@ public class CaramelCat extends BasicApp {
 			e.printStackTrace();
 		}
 
-	}
-
-	@Override
-	protected void each2Minutes() {
-		minePrefix.clear();
 	}
 
 	@Override
