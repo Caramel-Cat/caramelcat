@@ -369,7 +369,7 @@ button:disabled {
     		json["balance"] = "Loading...";
     		json["supply"] = "Loading...";
     	}
-    	get("#balance").innerHTML = "<b>Your balance: " + (json["balance"]/10_000).format(4, 3, ',', '.') + "</b><br/>Circulating Supply: " + (json["supply"]/10_000).format(4, 3, ',', '.');
+    	get("#balance").innerHTML = "<b>Your balance: <a href='javascript:btn_addX(" + json["balance"] + ");'>" + (json["balance"]/10_000).format(4, 3, ',', '.') + "</a></b><br/>Circulating Supply: " + (json["supply"]/10_000).format(4, 3, ',', '.');
     	if (json["prefix"] != null) prefix = json["prefix"];
     	if (json["debug"] != null) show("#debugMessage");
     	else  debug = false;		
@@ -565,7 +565,16 @@ button:disabled {
 	function btn_clean() {
 		clean();
 		get("#keysTextArea").value = '';
-	}	
+	}
+	
+	function btn_addX(amount) {
+		if (amount > 0) {
+			btn_add(0);
+			btn_add(amount-1);
+		} else {
+			error("invalid amount");
+		}
+	}
 	
 	function btn_add(amount) {
 		if (amount == 0) {

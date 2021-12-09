@@ -18,6 +18,7 @@ import webapp.Static;
 
 public class CaramelCat extends BasicApp {
 
+	private static final long MAX_SUPPLY = 1_000_000_0000L;
 	private static long supply = 0;
 
 	// server control new coins
@@ -111,7 +112,7 @@ public class CaramelCat extends BasicApp {
 		if (isYou) {
 			print("WARN: Wallet mode disabled. Server mode on.");
 			walletMode = false;
-			c.prepareSnapshot();
+			c.takeSnapshot();
 		}
 
 		if (walletMode) prepare_miner();
@@ -168,7 +169,7 @@ public class CaramelCat extends BasicApp {
 		response.put("status", "error");
 
 		// should we have max supply?
-		if (supply >= 1_000_000_0000L) return response;
+		if (supply >= MAX_SUPPLY) return response;
 
 		// must has a prefix to mine (see ping)
 		String prefix = minePrefix.get(user);
@@ -394,6 +395,7 @@ public class CaramelCat extends BasicApp {
 			JSONObject data = get();
 			String[] keys = JSONObject.getNames(data);
 			long balance = 0;
+			supply = 0;
 			for (String k : keys) {
 				Object value = data.get(k);
 				// if invalid remove, else recalculate supply
