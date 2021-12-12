@@ -48,7 +48,7 @@ font-size: small;
 width: 140px;
 }
 
-#amountValue {
+#amountValue, #msg {
 width: 290px;
 font-size: x-large;
 }
@@ -304,6 +304,7 @@ button:disabled {
  	      "jwk",
  	      key
  	    );
+ 	    delete exported["alg"];
  	    delete exported["crv"];
  	    delete exported["kty"];
  	    delete exported["key_ops"];
@@ -372,6 +373,7 @@ button:disabled {
     	get("#balance").innerHTML = "<b>Your balance: <a href='javascript:btn_addX(" + json["balance"] + ");'>" + (json["balance"]/10_000).format(4, 3, ',', '.') + "</a></b><br/>Circulating Supply: " + (json["supply"]/10_000).format(4, 3, ',', '.');
     	if (json["prefix"] != null) prefix = json["prefix"];
     	if (json["debug"] != null) show("#debugMessage");
+    	if (json["chat"] != null) get("#chat").value = json["chat"];
     	else  debug = false;		
 	}
 	
@@ -596,6 +598,23 @@ button:disabled {
 		get("#amountValue").value = (get("#amount").value/10_000).format(4, 3, ',', '.');			
 	}	
 	
+	/*
+	==================================================
+	======================= CHAT =====================
+	==================================================	
+	*/	
+	
+	function btn_chat() {
+		msg = address.substring(0,4) + "..: " + get("#msg").value;
+		chatRequest = prepareRequest(callBackChat);    
+		chatRequest.send(JSON.stringify({'method':'chat', msg:msg}));		
+		get("#msg").value = "";
+	}
+	
+	function callBackChat(json) {
+		get("#chat").value = json["chat"];
+	}		
+	
     </script>
 </head>
 
@@ -656,8 +675,8 @@ button:disabled {
 		<!-- ======================= MESSAGES ========================== -->
 		<!-- =========================================================== -->
 		<div>
-		<div id="errorMessage" style="color:red;"></div><br/>		
-		<div id="statusMessage" style="color:blue;"></div><br/>
+		<div id="errorMessage" style="color:red;"></div>&nbsp;&nbsp;
+		<div id="statusMessage" style="color:blue;"></div>&nbsp;&nbsp;
 		<div id="greenMessage" style="color:green;"></div>
 		</div>
 		
@@ -665,7 +684,11 @@ button:disabled {
 		<!-- ========================= FOOTER ========================== -->
 		<!-- =========================================================== -->		
 		<div id="footer">
-		<a target="_blank" href="/whitepaper.html">info</a>	
+		<a target="_blank" href="/whitepaper.html">info</a><br/><br/>
+		<b>Chat / Last Txs</b>
+		<textarea id="chat" rows="20" readonly="readonly">
+		</textarea>
+		<input id="msg" type="text" value="" maxlength="42" />&nbsp;&nbsp;<button onclick="btn_chat();">Send</button>
 		</div>
 </div>	
 </body>

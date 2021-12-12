@@ -48,7 +48,9 @@ public abstract class WebApp {
 
 			try {
 				String userID = user.getId();
+				if (webapp.debug()) print("IN: " + requestJSON);
 				responseJSON = webapp.exec(userID, requestJSON);
+				if (webapp.debug()) print("OUT: " + responseJSON);
 
 			} catch (Exception e) {
 				responseJSON.put("status", "error");
@@ -173,7 +175,7 @@ public abstract class WebApp {
 		}
 	}
 
-	protected static void print(String s) {
+	protected static void print(Object s) {
 		System.out.println(s);
 	}
 
