@@ -270,7 +270,7 @@ public abstract class WebApp {
 
 	protected Long getLong(String key) {
 		JSONObject data = prevayler.prevalentSystem().data;
-		if (data.has(key) && data.get(key) instanceof Number) return data.getLong(key);
+		if (data.has(key)) return data.getLong(key);
 		else return 0L;
 	}
 

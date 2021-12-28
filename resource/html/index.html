@@ -501,7 +501,8 @@ button:disabled {
 				    transfer.send(JSON.stringify({'method':'transfer', from:pubkey64, to:to, amount:amount, sign:base64EncodeURL(new Int8Array(signature))}));
 		  	    });	
 	    
-		get("#amount").value = ""; 		
+		get("#amount").value = "";
+		get("#amountValue").value = ""; 		
 				
 		setTimeout(balanceLoop, 1000);		
  	}  	
