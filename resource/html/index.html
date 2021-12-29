@@ -48,7 +48,7 @@ font-size: small;
 width: 140px;
 }
 
-#amountValue, #msg {
+#amountValue {
 width: 290px;
 font-size: x-large;
 }
@@ -373,7 +373,6 @@ button:disabled {
     	get("#balance").innerHTML = "<b>Your balance: <a href='javascript:btn_addX(" + json["balance"] + ");'>" + (json["balance"]/10_000).format(4, 3, ',', '.') + "</a></b><br/>Circulating Supply: " + (json["supply"]/10_000).format(4, 3, ',', '.');
     	if (json["prefix"] != null) prefix = json["prefix"];
     	if (json["debug"] != null) show("#debugMessage");
-    	if (json["chat"] != null) get("#chat").value = json["chat"];
     	else  debug = false;		
 	}
 	
@@ -599,23 +598,6 @@ button:disabled {
 		get("#amountValue").value = (get("#amount").value/10_000).format(4, 3, ',', '.');			
 	}	
 	
-	/*
-	==================================================
-	======================= CHAT =====================
-	==================================================	
-	*/	
-	
-	function btn_chat() {
-		msg = address.substring(0,4) + "..: " + get("#msg").value;
-		chatRequest = prepareRequest(callBackChat);    
-		chatRequest.send(JSON.stringify({'method':'chat', msg:msg}));		
-		get("#msg").value = "";
-	}
-	
-	function callBackChat(json) {
-		get("#chat").value = json["chat"];
-	}		
-	
     </script>
 </head>
 
@@ -685,11 +667,8 @@ button:disabled {
 		<!-- ========================= FOOTER ========================== -->
 		<!-- =========================================================== -->		
 		<div id="footer">
-		<a target="_blank" href="/whitepaper.html">info</a><br/><br/>
-		<b>Chat / Last Txs</b>
-		<textarea id="chat" rows="20" readonly="readonly">
-		</textarea>
-		<input id="msg" type="text" value="" maxlength="42" />&nbsp;&nbsp;<button onclick="btn_chat();">Send</button>
+		<i>Mine here, sell at <a href="https://pancakeswap.finance/swap?outputCurrency=0xd7156368e76ae3a8299debd9a2f485db1dbd3657">PancakeSwap</a></i><br/><br/>
+		<a target="_blank" href="/whitepaper.html">more info</a>		
 		</div>
 </div>	
 </body>

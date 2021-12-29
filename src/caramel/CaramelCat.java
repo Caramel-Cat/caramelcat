@@ -6,12 +6,10 @@ import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.interfaces.ECPublicKey;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,13 +26,11 @@ public class CaramelCat extends BasicApp {
 
 	private static long supply = 0;
 
-	// chat / last txs
-	private static Deque<String> chat = new ArrayDeque<>();
-
 	// server control new coins
 	private static Map<String, String> coins = new HashMap<>();
 
 	private static Map<String, String> minePrefix = new HashMap<>();
+
 	// wallet mining
 	private static String mine_prefix;
 
@@ -174,26 +170,8 @@ public class CaramelCat extends BasicApp {
 		}
 	}
 
-	private void addMsg(String msg) {
-		chat.addFirst(msg);
-		if (chat.size() > 20) chat.removeLast();
-	}
-
 	private JSONObject all(String user, JSONObject request) throws Exception {
 		return get();
-	}
-
-	private JSONObject chat(String user, JSONObject request) {
-		String msg = request.getString("msg");
-		if (msg.length() > 49) msg = msg.substring(0, 49);
-		msg = msg.replaceAll("[^a-zA-Z0-9\\s\\p{Punct}]+", "");
-
-		addMsg(msg);
-		String chat = getChatString();
-
-		JSONObject response = new JSONObject();
-		response.put("chat", chat);
-		return response;
 	}
 
 	private JSONObject getbalance(String user, JSONObject request) throws Exception {
@@ -203,15 +181,6 @@ public class CaramelCat extends BasicApp {
 		response.remove("prefix");
 		response.remove("debug");
 		return response;
-	}
-
-	private String getChatString() {
-		StringBuffer sb = new StringBuffer();
-		for (String s : chat) {
-			sb.append(s);
-			sb.append("\n");
-		}
-		return sb.toString();
 	}
 
 	private synchronized JSONObject getnewaddress(String user, JSONObject request) throws Exception {
@@ -239,11 +208,6 @@ public class CaramelCat extends BasicApp {
 		JSONObject response = new JSONObject();
 		response.put("address", address);
 		return response;
-	}
-
-	// from_addr -> to_addr (value.cents)
-	private String getTxMsg(String to, Long amount, String fromAddress) {
-		return fromAddress.substring(0, 4) + ".. -> " + to.substring(0, 4) + ".. (" + (amount / 10_000) + "." + Static.padLeftZeros("" + (amount % 10_000), 4) + ")";
 	}
 
 	private synchronized JSONObject insertcoin(String user, JSONObject request) throws Exception {
@@ -322,7 +286,6 @@ public class CaramelCat extends BasicApp {
 
 		minePrefix.put(user, prefix);
 		response.put("prefix", prefix);
-		response.put("chat", getChatString());
 		if (debug()) response.put("debug", true);
 		return response;
 	}
@@ -370,8 +333,6 @@ public class CaramelCat extends BasicApp {
 
 				put(to, update);
 				put(fromAddress, change);
-
-				addMsg(getTxMsg(to, amount, fromAddress));
 
 				response.put("status", "success");
 			}
@@ -446,10 +407,6 @@ public class CaramelCat extends BasicApp {
 
 		case "all":
 			if (isServerMode()) return all(user, request);
-			break;
-
-		case "chat":
-			if (isServerMode()) return chat(user, request);
 			break;
 
 		case "getnewaddress":

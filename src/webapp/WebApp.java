@@ -203,11 +203,11 @@ public abstract class WebApp {
 							return;
 						}
 						l++;
-						if (l % 86400 == 0) {
-							eachDay();
+						if (l % 86400 == 0) eachDay();
+						if (l % 3600 == 0) {
 							takeSnapshot();
+							eachHour();
 						}
-						if (l % 3600 == 0) eachHour();
 						if (l % 120 == 0) each2Minutes();
 						if (l % 60 == 0) eachMinute();
 						if (l % 10 == 0) {
