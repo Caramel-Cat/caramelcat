@@ -22,7 +22,7 @@ import webapp.Static;
 
 public class CaramelCat extends BasicApp {
 
-	private static final long MAX_SUPPLY = 1_000_000_0000L;
+	private static final long MAX_SUPPLY = 100_000_000_0000L;
 
 	private static long supply = 0;
 
@@ -238,8 +238,10 @@ public class CaramelCat extends BasicApp {
 		if (upper.startsWith(prefix)) {
 			Long balance = getLong(address);
 
-			put(address, ++balance);
-			supply++;
+			balance = balance + 1003;
+			put(address, balance);
+			supply = supply + 1003;
+
 			coins.put(hash, text);
 
 			response.put("status", "success");
